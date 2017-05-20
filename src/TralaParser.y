@@ -1,10 +1,26 @@
 {
-module TralaParser where
+module TralaParser (
+    parse,
+    Token (..),
+    evalState,
+    runExceptT,
+    either,
+    ParserState (..),
+    ParserException (..)
+) where
+
+
+import TralaParserInternal
+import Control.Monad.State
+import Control.Monad.Except
+
 }
 
 %name parse
 %tokentype { Token }
 %error { parseError }
+%monad { TralaParserMonad }
+%lexer { lexer } { EOFToken }
 
 %token
     dummy    { DummyToken }
@@ -13,13 +29,3 @@ module TralaParser where
 
 dummyRule : dummy { 1 } |
             dummyRule dummy { $1 + 1 }
-
-
-{
-
-data Token = DummyToken
-
-parseError :: [Token] -> a
-parseError _ = error "Parse error"
-
-}
