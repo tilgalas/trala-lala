@@ -23,9 +23,9 @@ import Control.Monad.Except
 %lexer { lexer } { EOFToken }
 
 %token
-    dummy    { DummyToken }
+    token { NonWhiteToken _ }
 
 %%
 
-dummyRule : dummy { 1 } |
-            dummyRule dummy { $1 + 1 }
+tokenList  : token           { [$1] }
+           | tokenList token { $2 : $1 }

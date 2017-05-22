@@ -5,25 +5,24 @@ import qualified Control.Monad.State as State
 
 type ParserMonad e s = Except.ExceptT e (State.State s)
 
-data ParserState = ParserState Int
+data ParserState = ParserState [Token]
 data ParserException = ParserException {
     getMessage :: String
 }
 
 type TralaParserMonad = ParserMonad ParserException ParserState
 
-data Token = DummyToken | EOFToken
+data Token = EOFToken | NonWhiteToken String
+    deriving (Eq, Show)
 
 parseError :: Token -> TralaParserMonad a
 parseError _ = Except.throwError $ ParserException "parse error"
 
 lexer :: (Token -> TralaParserMonad a) -> TralaParserMonad a
 lexer c = do
-    ParserState i <- State.get
-    if i == 0 then
-        c EOFToken
-    else if i < 0 then
-        Except.throwError $ ParserException "Negative parser state"
-    else do
-        State.put $ ParserState (i - 1)
-        c DummyToken
+    ParserState tokenList <- State.get
+    case tokenList of
+        [] -> c EOFToken
+        tok:tokens -> do
+            State.put $ ParserState tokens
+            c tok
