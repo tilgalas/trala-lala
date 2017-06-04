@@ -12,8 +12,34 @@ data ParserException = ParserException {
 
 type TralaParserMonad = ParserMonad ParserException ParserState
 
-data Token = EOFToken | NonWhiteToken String
+data Token = EOFToken |
+             FloatLit Float |
+             IntegerLit Int |
+             Id String |
+             EqualSign |
+             DblEqualSign |
+             DblColon |
+             Operator String |
+             LeftParen |
+             RightParen |
+             TrueLit |
+             FalseLit |
+             Underscore |
+             Newline
+
     deriving (Eq, Show)
+
+
+data EquationTerm = TokenTerm Token |
+                    NestedTerm EquationTermTree
+    deriving (Eq, Show)
+
+type EquationTermTree = [EquationTerm]
+
+data Equation = Equation {
+    equationLhs :: EquationTermTree,
+    equationRhs :: EquationTermTree
+} deriving (Eq, Show)
 
 parseError :: Token -> TralaParserMonad a
 parseError _ = Except.throwError $ ParserException "parse error"

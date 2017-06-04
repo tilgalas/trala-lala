@@ -23,9 +23,35 @@ import Control.Monad.Except
 %lexer { lexer } { EOFToken }
 
 %token
-    token { NonWhiteToken _ }
+    integer { IntegerLit _ }
+    float   { FloatLit _ }
+    identifier { Id _ }
+    equalSign { EqualSign }
+    dblEqualSign { DblEqualSign }
+    dblColon { DblColon }
+    operator { Operator _ }
+    leftParen { LeftParen }
+    rightParen { RightParen }
+    trueLit { TrueLit }
+    falseLit { FalseLit }
+    underscore { Underscore }
+    newline { Newline }
 
 %%
 
-tokenList  : token           { [$1] }
-           | tokenList token { $2 : $1 }
+equationList : equation { [$1] }
+             | equationList newline equation { $3 : $1 }
+             | equationList newline { $1 }
+
+equation   : equationTermTree equalSign equationTermTree { Equation $1 $3 }
+
+equationTermTree : equationTerm { [$1] } |
+                   equationTermTree equationTerm { $2 : $1 }
+
+equationTerm : token { TokenTerm $1 } |
+               leftParen equationTermTree rightParen { NestedTerm $2 }
+
+token      : integer { $1 }
+           | float { $1 }
+           | identifier { $1 }
+
