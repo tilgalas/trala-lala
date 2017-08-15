@@ -1,25 +1,18 @@
 {
-module TralaParser (
-    parse,
-    Token (..),
-    evalState,
-    runExceptT,
-    either,
-    ParserState (..),
-    ParserException (..)
-) where
+module TralaParser where
 
 
 import TralaParserInternal
-import Control.Monad.State
-import Control.Monad.Except
-
+import TralaParsingCommon
+import Data.Functor.Identity
+import Data.Text (Text)
+  
 }
 
 %name parse
-%tokentype { Token }
+%tokentype { Token Text }
 %error { parseError }
-%monad { TralaParserMonad }
+%monad { TralaParserMonad Identity }
 %lexer { lexer } { EOFToken }
 
 %token

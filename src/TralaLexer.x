@@ -1,10 +1,10 @@
 {
 module TralaLexer where
 
-import TralaParserInternal
-}
+import TralaAlexWrapper
+import TralaParsingCommon
 
-%wrapper "basic"
+}
 
 $whiteExceptNl = $white # \n
 $digit = [0-9]
@@ -12,8 +12,8 @@ $digit = [0-9]
 :-
 
 $whiteExceptNl         ;
-$digit+                { IntegerLit . read }
-$digit*\.$digit+       { FloatLit . read }
+$digit+                { readIntegerLit }
+$digit*\.$digit+       { readFloatLit }
 [_a-zA-Z][_a-zA-Z0-9]* { Id }
 =                      { const EqualSign }
 ==                     { const DblEqualSign }
@@ -24,5 +24,6 @@ $digit*\.$digit+       { FloatLit . read }
 true                   { const TrueLit }
 false                  { const FalseLit }
 _                      { const Underscore }
+\.                     { const Dot }
 \\^\n                  ;
 \n                     { const Newline }

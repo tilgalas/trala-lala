@@ -1,36 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
 module TralaParserInternal where
 
-import qualified Control.Monad.Except as Except
-import qualified Control.Monad.State as State
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.State
+import Control.Monad.Trans.Class
+import TralaParsingCommon
+import Data.Text(Text)
 
-type ParserMonad e s = Except.ExceptT e (State.State s)
+type ParserMonad e s m = ExceptT e (StateT s m)
 
-data ParserState = ParserState [Token]
+data ParserState = ParserState [Token Text]
 data ParserException = ParserException {
-    getMessage :: String
+    getMessage :: Text
 }
 
-type TralaParserMonad = ParserMonad ParserException ParserState
+type TralaParserMonad m = ParserMonad ParserException ParserState m
 
-data Token = EOFToken |
-             FloatLit Float |
-             IntegerLit Int |
-             Id String |
-             EqualSign |
-             DblEqualSign |
-             DblColon |
-             Operator String |
-             LeftParen |
-             RightParen |
-             TrueLit |
-             FalseLit |
-             Underscore |
-             Newline
-
-    deriving (Eq, Show)
-
-
-data EquationTerm = TokenTerm Token |
+data EquationTerm = TokenTerm (Token Text) |
                     NestedTerm EquationTermTree
     deriving (Eq, Show)
 
@@ -41,14 +27,14 @@ data Equation = Equation {
     equationRhs :: EquationTermTree
 } deriving (Eq, Show)
 
-parseError :: Token -> TralaParserMonad a
-parseError _ = Except.throwError $ ParserException "parse error"
+parseError :: Monad m => (Token Text) -> TralaParserMonad m a
+parseError _ = throwE $ ParserException "parse error"
 
-lexer :: (Token -> TralaParserMonad a) -> TralaParserMonad a
+lexer :: Monad m => ((Token Text) -> TralaParserMonad m a) -> TralaParserMonad m a
 lexer c = do
-    ParserState tokenList <- State.get
+    ParserState tokenList <- lift get
     case tokenList of
         [] -> c EOFToken
         tok:tokens -> do
-            State.put $ ParserState tokens
+            (lift . put) $ ParserState tokens
             c tok
