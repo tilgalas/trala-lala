@@ -75,13 +75,13 @@ tralaTokens = do
       return ()
 
 
-charsFromFile :: (Monad m, MonadResource m) => FilePath -> Conduit i m Char 
+charsFromFile :: (Monad m, MonadResource m) => FilePath -> Conduit i m Char
 charsFromFile fp = bracketP (openFile fp ReadMode) hClose (
   \h -> fix (\loop -> do
                 eof <- (liftIO . hIsEOF) h
                 if eof then
                   return ()
-                  else do 
+                else do
                   c <- (liftIO . hGetChar) h
                   yield c
                   loop
@@ -95,11 +95,13 @@ aggregate = do
   case nextChar of
     Nothing -> return ()
     Just c | isSpace c -> do
-               takeWhileC isSpace .| sinkList >>= (yield . T.pack)
+               takeAndPack isSpace
                aggregate
     Just c | otherwise -> do
-               takeWhileC (not . isSpace) .| sinkList >>= (yield . T.pack)
+               takeAndPack (not . isSpace)
                aggregate
+    where
+      takeAndPack p = takeWhileC p .| sinkList >>= (yield . T.pack)
 
 textToInput :: Monad m => Conduit Text (LexerMonad m) AlexInput
 textToInput = do
@@ -115,7 +117,7 @@ textToInput = do
        Nothing -> return ()
 
 
-alexInputsFromFile :: (Monad m, MonadResource m) => FilePath -> Conduit () (LexerMonad m) AlexInput 
+alexInputsFromFile :: (Monad m, MonadResource m) => FilePath -> Conduit () (LexerMonad m) AlexInput
 alexInputsFromFile fp =
    charsFromFile fp .| aggregate .| textToInput
 
