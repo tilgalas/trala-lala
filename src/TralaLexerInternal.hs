@@ -48,10 +48,9 @@ instance HasPosn LexerException where
 type LexerExcept m = ExceptT LexerException m
 type LexerMonad m = LexerExcept (LexerState m)
 
-tralaTokens :: MonadIO m => Conduit AlexInput (LexerExcept m) TokenInfo
+tralaTokens :: Monad m => Conduit AlexInput (LexerExcept m) TokenInfo
 tralaTokens = do
   maybeInput <- await
-  liftIO . putStrLn . show $ maybeInput
   case maybeInput of
     Just input@(posn, _, _, inputString) ->
       case alexScan input 0 of
