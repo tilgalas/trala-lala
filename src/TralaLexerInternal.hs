@@ -4,6 +4,7 @@ module TralaLexerInternal where
 import Data.Void
 import Data.Char
 import Data.Int
+import Data.Foldable
 
 import Conduit
 import TralaParsingCommon
@@ -108,7 +109,7 @@ textToInput = do
      case i of
        Just chunk -> do
          (posn, _, _, lastChunk) <- (lift . lift) get
-         let newPos = foldr (flip alexMove) posn (T.unpack chunk)
+         let newPos = foldl' alexMove posn (T.unpack chunk)
              newLastChar = T.last lastChunk
          (lift . lift . put) (newPos, newLastChar, [], chunk)
          yield (posn, newLastChar, [], chunk)
@@ -126,6 +127,6 @@ alexConduitFromFile fp = alexInputsFromFile fp .| tralaTokens
 runLexerConduit :: Monad m => ConduitM () Void (LexerMonad m) a -> AlexInput -> m (Either LexerException a)
 runLexerConduit c s = evalStateT (runExceptT $ runConduit c) s
 
-startAlexInput = (alexStartPos, '\0', [], "\0")
+startAlexInput = (alexStartPos, '\n', [], "\n")
 
 runLexerConduitFromStart c = runLexerConduit c startAlexInput
