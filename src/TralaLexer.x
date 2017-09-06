@@ -7,7 +7,7 @@ import TralaParsingCommon
 }
 
 $whiteExceptNl = $white # \n
-$digit = [0-9]
+$digit = 0-9
 
 :-
 
