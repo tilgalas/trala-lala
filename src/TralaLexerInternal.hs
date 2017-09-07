@@ -88,33 +88,61 @@ charsFromFile fp = bracketP (openFile fp ReadMode) hClose (
             )
   )
 
+stringDelim = '"'
+
+takeWhileNotEos :: Monad m => Conduit Char m Char
+takeWhileNotEos = do
+  takeWhileC (\c -> c /= '\\' && c /= stringDelim && c /= '\n')
+  c <- peekC
+  case c of
+    Nothing -> return ()
+    Just c | c == '\\' -> do
+               takeC 2  -- peeked c and whatever was escaped
+               takeWhileNotEos  -- resume
+    Just c | otherwise -> return ()
+
+
+aggregateStringLitContents :: Monad m => ConduitM Char o m Text
+aggregateStringLitContents = do
+  takeWhileNotEos .| sinkList >>= (return . T.pack)
+
+
+aggregateStringLit :: Monad m => ConduitM Char o m Text
+aggregateStringLit = do
+  quot <- await
+  case quot of
+    Nothing -> return T.empty
+    Just c -> do
+      contents <- aggregateStringLitContents
+      closeMaybe <- await  -- closing "
+      return $ c `T.cons` contents `T.append` (maybe "" T.singleton closeMaybe)
 
 aggregate :: Monad m => Conduit Char m Text
 aggregate = do
   nextChar <- peekC
   case nextChar of
     Nothing -> return ()
+    Just c | c == stringDelim -> do
+               aggregateStringLit >>= yield
+               aggregate
     Just c | isSpace c -> do
-               takeAndPack isSpace
+               takeAndPack isSpace >>= yield
                aggregate
     Just c | otherwise -> do
-               takeAndPack (not . isSpace)
+               takeAndPack (\c -> (not . isSpace) c && not (c == stringDelim)) >>= yield
                aggregate
     where
-      takeAndPack p = takeWhileC p .| sinkList >>= (yield . T.pack)
+      takeAndPack p = takeWhileC p .| sinkList >>= (return . T.pack)
 
 textToInput :: Monad m => Conduit Text (LexerMonad m) AlexInput
-textToInput = do
-     i <- await
-     case i of
-       Just chunk -> do
-         (posn, _, _, lastChunk) <- (lift . lift) get
-         let newPos = foldl' alexMove posn (T.unpack chunk)
-             newLastChar = T.last lastChunk
-         (lift . lift . put) (newPos, newLastChar, [], chunk)
-         yield (posn, newLastChar, [], chunk)
-         textToInput
-       Nothing -> return ()
+textToInput = mapMC (
+  \chunk -> do
+    (posn, _, _, lastChunk) <- lift get
+    let newPos = foldl' alexMove posn (T.unpack chunk)
+        newLastChar = T.last lastChunk
+    (lift . put) (newPos, newLastChar, [], chunk)
+    return (posn, newLastChar, [], chunk)
+  )
 
 
 alexInputsFromFile :: (Monad m, MonadResource m) => FilePath -> Conduit () (LexerMonad m) AlexInput
